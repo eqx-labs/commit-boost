@@ -44,6 +44,7 @@ impl PbsMuxes {
 
         for mux in muxes.iter_mut() {
             ensure!(!mux.relays.is_empty(), "mux config {} must have at least one relay", mux.id);
+            ensure!(!mux.pbs_modules.is_empty(), "mux config {} must have at least one pbs module", mux.id);
 
             if let Some(loader) = &mux.loader {
                 let extra_keys = loader.load(&mux.id, chain, default_pbs.rpc_url.clone()).await?;
@@ -74,12 +75,19 @@ impl PbsMuxes {
                 id = mux.id,
                 keys = mux.validator_pubkeys.len(),
                 relays = mux.relays.len(),
+                pbs_modules = mux.pbs_modules.len(),
                 "using mux"
             );
 
             let mut relay_clients = Vec::with_capacity(mux.relays.len());
             for config in mux.relays.into_iter() {
                 relay_clients.push(RelayClient::new(config)?);
+            }
+
+            let mut pbs_configs = Vec::with_capacity(mux.pbs_modules.len());
+
+            for config in mux.pbs_modules.into_iter() {
+                pbs_configs.push(PbsConfig::new(config)?);
             }
 
             let config = PbsConfig {
@@ -91,6 +99,7 @@ impl PbsMuxes {
                     .unwrap_or(default_pbs.late_in_slot_time_ms),
                 ..default_pbs.clone()
             };
+
             let config = Arc::new(config);
 
             let runtime_config = RuntimeMuxConfig { id: mux.id, config, relays: relay_clients };

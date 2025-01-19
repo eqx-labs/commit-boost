@@ -15,10 +15,7 @@ use eyre::{ensure, Result};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use url::Url;
 
-use super::{
-    constants::PBS_IMAGE_DEFAULT, load_optional_env_var, CommitBoostConfig, RuntimeMuxConfig,
-    PBS_ENDPOINT_ENV,
-};
+use super::{constants::PBS_IMAGE_DEFAULT, load_optional_env_var, CommitBoostConfig, RuntimeMuxConfig, StaticModuleConfig, PBS_ENDPOINT_ENV};
 use crate::{
     commit::client::SignerClient,
     config::{
@@ -98,6 +95,12 @@ pub struct PbsConfig {
     pub extra_validation_enabled: bool,
     /// Execution Layer RPC url to use for extra validation
     pub rpc_url: Option<Url>,
+}
+
+impl PbsConfig {
+    pub(crate) fn new(p0: StaticModuleConfig) -> _ {
+        todo!()
+    }
 }
 
 impl PbsConfig {
