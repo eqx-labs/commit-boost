@@ -113,6 +113,7 @@ struct ChainConfig {
 struct HelperConfig {
     chain: ChainLoader,
     relays: Vec<RelayConfig>,
+    #[serde(rename = "pbs")]
     pbses: Option<Vec<StaticPbsConfig>>,
     #[serde(flatten)]
     muxes: Option<PbsMuxes>,
