@@ -15,3 +15,5 @@ targets.json
 .idea/
 logs
 .vscode/
+config.bat
+node_modules
