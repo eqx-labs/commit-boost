@@ -1,3 +1,5 @@
+pub use crate::config::module::{StaticModuleConfig};
+
 use std::{
     collections::{HashMap, HashSet},
     path::{Path, PathBuf},
@@ -28,7 +30,7 @@ pub struct PbsMuxes {
 #[derive(Debug, Clone)]
 pub struct RuntimeMuxConfig {
     pub id: String,
-    pub config: Arc<PbsConfig>,
+    pub pbs_configs: Vec<Arc<PbsConfig>>,
     pub relays: Vec<RelayClient>,
 }
 
@@ -41,7 +43,7 @@ impl PbsMuxes {
         let mut muxes = self.muxes;
 
         for mux in muxes.iter_mut() {
-            ensure!(!mux.relays.is_empty(), "mux config {} must have at least one relay", mux.id);
+            ensure!(!mux.pbs_modules.is_empty(), "mux config {} must have at least one pbs module", mux.id);
 
             if let Some(loader) = &mux.loader {
                 let extra_keys = loader.load(&mux.id, chain, default_pbs.rpc_url.clone()).await?;
@@ -72,6 +74,7 @@ impl PbsMuxes {
                 id = mux.id,
                 keys = mux.validator_pubkeys.len(),
                 relays = mux.relays.len(),
+                pbs_modules = mux.pbs_modules.len(),
                 "using mux"
             );
 
@@ -80,18 +83,12 @@ impl PbsMuxes {
                 relay_clients.push(RelayClient::new(config)?);
             }
 
-            let config = PbsConfig {
-                timeout_get_header_ms: mux
-                    .timeout_get_header_ms
-                    .unwrap_or(default_pbs.timeout_get_header_ms),
-                late_in_slot_time_ms: mux
-                    .late_in_slot_time_ms
-                    .unwrap_or(default_pbs.late_in_slot_time_ms),
-                ..default_pbs.clone()
-            };
-            let config = Arc::new(config);
+            let mut pbs_configs = Vec::with_capacity(mux.pbs_modules.len());
+            for config in mux.pbs_modules.into_iter() {
+                pbs_configs.push(Arc::new(PbsConfig::new(config)));
+            }
 
-            let runtime_config = RuntimeMuxConfig { id: mux.id, config, relays: relay_clients };
+            let runtime_config = RuntimeMuxConfig { id: mux.id, pbs_configs, relays: relay_clients };
             for pubkey in mux.validator_pubkeys.iter() {
                 configs.insert(*pubkey, runtime_config.clone());
             }
@@ -112,6 +109,8 @@ pub struct MuxConfig {
     #[serde(default)]
     pub validator_pubkeys: Vec<BlsPublicKey>,
     /// Loader for extra validator pubkeys
+    /// PBS Modules to use for this mux config
+    pub pbs_modules: Option<Vec<StaticModuleConfig>>,
     pub loader: Option<MuxKeysLoader>,
     pub timeout_get_header_ms: Option<u64>,
     pub late_in_slot_time_ms: Option<u64>,
