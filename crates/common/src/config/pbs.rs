@@ -6,6 +6,8 @@ use std::{
     sync::Arc,
 };
 
+use super::{constants::PBS_IMAGE_DEFAULT, load_optional_env_var, CommitBoostConfig, RuntimeMuxConfig, StaticModuleConfig, PBS_ENDPOINT_ENV};
+
 use alloy::{
     primitives::{utils::format_ether, U256},
     providers::{Provider, ProviderBuilder},
@@ -15,10 +17,7 @@ use eyre::{ensure, Result};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use url::Url;
 
-use super::{
-    constants::PBS_IMAGE_DEFAULT, load_optional_env_var, CommitBoostConfig, RuntimeMuxConfig,
-    PBS_ENDPOINT_ENV,
-};
+
 use crate::{
     commit::client::SignerClient,
     config::{
@@ -198,12 +197,12 @@ pub async fn load_pbs_config() -> Result<PbsModuleConfig> {
     let endpoint = if let Some(endpoint) = load_optional_env_var(PBS_ENDPOINT_ENV) {
         endpoint.parse()?
     } else {
-        SocketAddr::from((config.pbs.pbs_config.host, config.pbs.pbs_config.port))
+        SocketAddr::from((config.pbs_modules[0].pbs_config.host, config.pbs_modules[0].pbs_config.port))
     };
 
     let muxes = match config.muxes {
         Some(muxes) => {
-            let mux_configs = muxes.validate_and_fill(config.chain, &config.pbs.pbs_config).await?;
+            let mux_configs = muxes.validate_and_fill(config.chain, &config.pbs_modules[0].pbs_config).await?;
             Some(mux_configs)
         }
         None => None,
@@ -235,7 +234,7 @@ pub async fn load_pbs_config() -> Result<PbsModuleConfig> {
     Ok(PbsModuleConfig {
         chain: config.chain,
         endpoint,
-        pbs_config: Arc::new(config.pbs.pbs_config),
+        pbs_config: Arc::new(config.pbs_modules[0].pbs_config.clone()),
         relays: relay_clients,
         all_relays,
         signer_client: None,
